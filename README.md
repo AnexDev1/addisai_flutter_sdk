@@ -4,6 +4,10 @@
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Flutter](https://img.shields.io/badge/flutter-supported-02569B?logo=flutter)
 
+<!-- display logo asset -->
+![Addis AI Logo](apps/addis_assistant/assets/logo_icon.jpg)
+
+
 A clean, robust, and asynchronous Dart SDK for the [Addis AI REST and Realtime API](https://platform.addisassistant.com/docs). 
 
 Addis AI is purpose-built for Ethiopian languages, providing native-level generation, understanding, and speech synthesis for **Amharic (am)** and **Afan Oromo (om)**.
@@ -24,6 +28,24 @@ This SDK is 100% feature-complete with the Addis AI Platform:
 * 📱 **Mobile Ready**: Built-in generic timeouts, isolated JSON parsing handling, and optimized chunk delivery for Flutter apps.
 
 ---
+
+## Installation
+
+This SDK and its example/test applications ship with a custom logo `logo_icon.jpg` stored in `apps/addis_assistant/assets/`.
+It's also used in this README above. To apply it as the launcher icon for the sample apps run:
+
+```bash
+cd apps/addis_assistant
+flutter pub get
+flutter pub run flutter_launcher_icons:main
+
+# repeat for example app
+cd ../../example
+flutter pub get
+flutter pub run flutter_launcher_icons:main
+```
+
+These commands use the `flutter_launcher_icons` package, which is added in each app's `dev_dependencies` and configured in their `pubspec.yaml`.
 
 ## Installation
 
