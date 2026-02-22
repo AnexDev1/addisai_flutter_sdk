@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:addis_ai_sdk/addis_ai_sdk.dart';
+import 'package:image_picker/image_picker.dart';
 
 class ChatTab extends StatefulWidget {
   final AddisAI client;
@@ -13,9 +15,11 @@ class ChatTab extends StatefulWidget {
 class _ChatTabState extends State<ChatTab> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final ImagePicker _picker = ImagePicker();
 
-  final List<ChatMessage> _messages = [];
+  final List<Map<String, dynamic>> _messages = [];
   bool _isLoading = false;
+  File? _selectedImage;
 
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -34,35 +38,54 @@ class _ChatTabState extends State<ChatTab> {
     if (text.isEmpty) return;
 
     setState(() {
-      _messages.add(ChatMessage(role: 'user', content: text));
+      _messages.add({
+        'role': 'user',
+        'content': text,
+        'image': imageToUpload,
+      });
       _isLoading = true;
+      _selectedImage = null;
     });
     _controller.clear();
     _scrollToBottom();
 
     try {
-      int assistantIndex = _messages.length;
-      setState(() {
-        _messages.add(const ChatMessage(role: 'assistant', content: ''));
-      });
+    try {
+      final history = _messages.sublist(0, _messages.length - 1).map((m) {
+        return ChatMessage(role: m['role'], content: m['content']);
+      }).toList();
 
-      String currentResponse = '';
+      ChatResponse response;
+      if (imageToUpload != null) {
+        final bytes = await imageToUpload.readAsBytes();
+        final fileName = imageToUpload.path.split('/').last;
+        response = await widget.client.generateChatWithAttachments(
+          ChatRequest(
+            prompt: text.isEmpty ? 'Can you describe this image?' : text,
+            targetLanguage: Language.am,
+            attachmentFieldNames: ['context_image'],
+            conversationHistory: history.isNotEmpty ? history : null,
+          ),
+          files: {'context_image': bytes},
+          fileNames: {'context_image': fileName},
+        );
+      } else {
+        response = await widget.client.generateChat(
+          ChatRequest(
+            prompt: text,
+            targetLanguage: Language.am,
+            conversationHistory: history,
+          ),
+        );
+      }
 
-      final stream = widget.client.generateChatStream(
-        ChatRequest(
-          prompt: text,
-          targetLanguage: Language.am,
-          conversationHistory: _messages.sublist(0, assistantIndex),
-        ),
-      );
-
-      await for (final chunk in stream) {
-        currentResponse += chunk.responseText;
+      if (mounted) {
         setState(() {
-          _messages[assistantIndex] = ChatMessage(
-            role: 'assistant',
-            content: currentResponse,
-          );
+          _messages.add({
+            'role': 'assistant',
+            'content': response.responseText,
+            'image': null,
+          });
         });
         _scrollToBottom();
       }
@@ -97,7 +120,9 @@ class _ChatTabState extends State<ChatTab> {
             itemCount: _messages.length,
             itemBuilder: (context, index) {
               final message = _messages[index];
-              final isUser = message.role == 'user';
+              final isUser = message['role'] == 'user';
+              final File? image = message['image'] as File?;
+
               return Align(
                 alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
                 child: Container(
@@ -112,9 +137,26 @@ class _ChatTabState extends State<ChatTab> {
                   constraints: BoxConstraints(
                     maxWidth: MediaQuery.of(context).size.width * 0.75,
                   ),
-                  child: Text(
-                    message.content,
-                    style: const TextStyle(fontSize: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (image != null) ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(
+                            image,
+                            height: 150,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      if (message['content'] != null && (message['content'] as String).isNotEmpty)
+                        Text(
+                          message['content'] as String,
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                    ],
                   ),
                 ),
               );
@@ -131,6 +173,41 @@ class _ChatTabState extends State<ChatTab> {
             padding: const EdgeInsets.all(8.0),
             child: Row(
               children: [
+                if (_selectedImage != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8.0),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(
+                            _selectedImage!,
+                            height: 48,
+                            width: 48,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        Positioned(
+                          top: -8,
+                          right: -8,
+                          child: GestureDetector(
+                            onTap: () => setState(() => _selectedImage = null),
+                            child: const CircleAvatar(
+                              radius: 10,
+                              backgroundColor: Colors.red,
+                              child: Icon(Icons.close, size: 12, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                IconButton(
+                  icon: const Icon(Icons.image),
+                  color: Theme.of(context).colorScheme.primary,
+                  onPressed: _isLoading ? null : _pickImage,
+                ),
                 Expanded(
                   child: TextField(
                     controller: _controller,

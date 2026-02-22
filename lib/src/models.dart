@@ -79,11 +79,28 @@ class ChatRequest {
   });
 
   Map<String, dynamic> toJson() {
+    // When audio or other attachments are provided, we don't want to send a
+    // non-meaningful prompt (space) because some servers may ignore the audio
+    // field if prompt appears empty. Use an empty string when prompt is
+    // null/blank, and omit the redundant alias fields in that case.
+    final hasPrompt = prompt != null && prompt!.trim().isNotEmpty;
+    final p = hasPrompt ? prompt! : '';
     final map = <String, dynamic>{
       'target_language': targetLanguage.value,
     };
-    if (prompt != null) {
-      map['prompt'] = prompt;
+    if (hasPrompt) {
+      map.addAll({
+        'prompt': p,
+        'chat_text_input': p,
+        'query': p,
+        'text': p,
+        'chat_input': p,
+        'content': p,
+      });
+    } else {
+      // still include empty prompt so server doesn't treat it as missing when
+      // audio is attached
+      map['prompt'] = '';
     }
     if (conversationHistory != null && conversationHistory!.isNotEmpty) {
       map['conversation_history'] =
@@ -178,7 +195,13 @@ class ChatResponse {
 
   factory ChatResponse.fromJson(Map<String, dynamic> json) {
     return ChatResponse(
-      responseText: json['response_text'] as String? ?? '',
+      responseText: json['response_text'] as String? ??
+          json['responseText'] as String? ??
+          json['content'] as String? ??
+          json['text'] as String? ??
+          json['response'] as String? ??
+          json['message'] as String? ??
+          '',
       finishReason: json['finish_reason'] as String?,
       usageMetadata: json['usage_metadata'] != null
           ? UsageMetadata.fromJson(
@@ -325,7 +348,7 @@ class RealtimeAudioResponse extends RealtimeMessage {
       if (serverContent['turnComplete'] == true) {
         turnComplete = true;
       }
-      
+
       final modelTurn = serverContent['modelTurn'] as Map<String, dynamic>?;
       if (modelTurn != null && modelTurn['parts'] is List) {
         final parts = modelTurn['parts'] as List;
@@ -339,8 +362,10 @@ class RealtimeAudioResponse extends RealtimeMessage {
     }
 
     double? billedSeconds;
-    if (usageMetadata != null && usageMetadata['totalBilledAudioDurationSeconds'] != null) {
-      billedSeconds = (usageMetadata['totalBilledAudioDurationSeconds'] as num).toDouble();
+    if (usageMetadata != null &&
+        usageMetadata['totalBilledAudioDurationSeconds'] != null) {
+      billedSeconds =
+          (usageMetadata['totalBilledAudioDurationSeconds'] as num).toDouble();
     }
 
     return RealtimeAudioResponse(

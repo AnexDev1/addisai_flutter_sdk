@@ -7,7 +7,10 @@ enum Language {
   am,
 
   /// Afan Oromo
-  om;
+  om,
+
+  /// English
+  en;
 
   /// Returns the string value sent to the API (e.g. `"am"`).
   String get value => name;

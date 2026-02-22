@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart';
 
 import 'constants.dart';
@@ -89,32 +92,74 @@ class AddisAI {
     ChatRequest request, {
     required Map<String, List<int>> files,
     Map<String, String>? fileNames,
+    Map<String, String>? filePaths,
   }) async {
     final uri = Uri.parse('$baseUrl/chat_generate');
-    final multipart = http.MultipartRequest('POST', uri)
-      ..headers.addAll(_authHeaders);
 
-    // Add the JSON request data as a field.
-    multipart.fields['request_data'] = jsonEncode(request.toJson());
+    // Prepare JSON metadata
+    final requestJson = request.toJson();
+    final requestJsonStr = jsonEncode(requestJson);
 
-    // Add each file.
-    for (final entry in files.entries) {
-      final fieldName = entry.key;
-      final bytes = entry.value;
-      final fileName = fileNames?[fieldName] ?? fieldName;
-      final mimeType =
-          lookupMimeType(fileName) ?? 'application/octet-stream';
-      multipart.files.add(http.MultipartFile.fromBytes(
-        fieldName,
-        bytes,
-        filename: fileName,
-        contentType: _parseMediaType(mimeType),
-      ));
+    // Build multipart body manually so we can control part order/headers exactly.
+    final boundary =
+        '----dart_form_boundary_${DateTime.now().millisecondsSinceEpoch}';
+    final crlf = '\r\n';
+    final bodyBytes = <int>[];
+
+    void addString(String s) {
+      bodyBytes.addAll(utf8.encode(s));
     }
 
-    final streamedResponse = await _client
-        .send(multipart)
-        .timeout(const Duration(seconds: 60)); // Larger timeout for file uploads
+    // Add file parts first
+    for (final entry in files.entries) {
+      final fieldName = entry.key;
+      final providedBytes = entry.value;
+      final fileName = fileNames?[fieldName] ??
+          (fieldName == 'chat_audio_input' ? 'audio.wav' : fieldName);
+      final filePath = filePaths?[fieldName];
+
+      final isAudio = fieldName == 'chat_audio_input' || fieldName == 'audio';
+      final mimeType = isAudio
+          ? 'audio/wav'
+          : (lookupMimeType(fileName) ?? 'application/octet-stream');
+
+      final bytes =
+          filePath != null ? await File(filePath).readAsBytes() : providedBytes;
+
+      addString('--$boundary$crlf');
+      addString(
+          'Content-Disposition: form-data; name="${fieldName}"; filename="${fileName}"$crlf');
+      addString('Content-Type: $mimeType$crlf$crlf');
+      bodyBytes.addAll(bytes);
+      addString(crlf);
+    }
+
+    // Then append JSON metadata as its own part
+    addString('--$boundary$crlf');
+    addString('Content-Disposition: form-data; name="request_data"$crlf');
+    addString('Content-Type: application/json$crlf$crlf');
+    addString(requestJsonStr);
+    addString(crlf);
+
+    // Final boundary
+    addString('--$boundary--$crlf');
+
+    // DEBUG LOG
+    print('DEBUG SDK REQ: Endpoint: $uri');
+    print(
+        'DEBUG SDK REQ: Files: ${files.keys.map((k) => '$k (${files[k]?.length ?? 0} bytes)').join(', ')}');
+    print('DEBUG SDK REQ: request_data: $requestJsonStr');
+    final preview =
+        utf8.decode(bodyBytes.take(1024).toList(), allowMalformed: true);
+    print('DEBUG SDK REQ BODY PREVIEW:\n$preview\n---');
+
+    final httpRequest = http.Request('POST', uri)
+      ..headers.addAll(_authHeaders)
+      ..headers['Content-Type'] = 'multipart/form-data; boundary=$boundary'
+      ..bodyBytes = Uint8List.fromList(bodyBytes);
+
+    final streamedResponse =
+        await _client.send(httpRequest).timeout(const Duration(seconds: 60));
     final response = await http.Response.fromStream(streamedResponse);
     return _handleChatResponse(response);
   }
@@ -139,13 +184,19 @@ class AddisAI {
     );
 
     final uri = Uri.parse('$baseUrl/chat_generate');
-    final httpRequest = http.Request('POST', uri)
-      ..headers.addAll(_jsonHeaders)
-      ..body = jsonEncode(streamRequest.toJson());
+    final multipart = http.MultipartRequest('POST', uri)
+      ..headers.addAll(_authHeaders);
 
-    final streamedResponse = await _client
-        .send(httpRequest)
-        .timeout(const Duration(seconds: 30));
+    // 1. Prepare Request JSON
+    final requestJson = streamRequest.toJson();
+    final requestJsonStr = jsonEncode(requestJson);
+
+    // NOTE: Add any file parts here if needed (this streaming path currently
+    // does not attach files in examples). Then append `request_data` as the
+    // last multipart part with application/json content type.
+
+    final streamedResponse =
+        await _client.send(multipart).timeout(const Duration(seconds: 30));
 
     if (streamedResponse.statusCode != 200) {
       final body = await streamedResponse.stream.bytesToString();
@@ -184,6 +235,8 @@ class AddisAI {
           json = json['data'] as Map<String, dynamic>;
         }
 
+        print('DEBUG SDK JSON: $json');
+        print('DEBUG SDK CHUNK JSON: $json');
         yield ChatResponse.fromJson(json);
       } on FormatException {
         // Skip lines that are not valid JSON (e.g. SSE comments).
@@ -232,9 +285,8 @@ class AddisAI {
       ..headers.addAll(_jsonHeaders)
       ..body = jsonEncode(streamRequest.toJson());
 
-    final streamedResponse = await _client
-        .send(httpRequest)
-        .timeout(const Duration(seconds: 30));
+    final streamedResponse =
+        await _client.send(httpRequest).timeout(const Duration(seconds: 30));
 
     if (streamedResponse.statusCode != 200) {
       final body = await streamedResponse.stream.bytesToString();
@@ -298,7 +350,15 @@ class AddisAI {
     if (json.containsKey('data') && json['data'] is Map<String, dynamic>) {
       json = json['data'] as Map<String, dynamic>;
     }
-    return ChatResponse.fromJson(json);
+    final chatRes = ChatResponse.fromJson(json);
+    if (chatRes.uploadedAttachments.isNotEmpty) {
+      print(
+          'DEBUG SDK RES: Attachments: ${chatRes.uploadedAttachments.length}');
+    }
+    if (chatRes.transcriptionClean != null) {
+      print('DEBUG SDK RES: Transcription: "${chatRes.transcriptionClean}"');
+    }
+    return chatRes;
   }
 
   Never _throwFromBody(int statusCode, String body) {
@@ -308,18 +368,19 @@ class AddisAI {
     } on FormatException {
       throw AddisAIException(
         statusCode: statusCode,
-        message: body.isNotEmpty ? body : 'Request failed with status $statusCode',
+        message:
+            body.isNotEmpty ? body : 'Request failed with status $statusCode',
       );
     }
   }
 
   /// Parses a MIME type string like `"image/jpeg"` into an [http.MediaType]
   /// compatible object used by [http.MultipartFile].
-  static http.MediaType _parseMediaType(String mimeType) {
+  static MediaType _parseMediaType(String mimeType) {
     final parts = mimeType.split('/');
     if (parts.length == 2) {
-      return http.MediaType(parts[0], parts[1]);
+      return MediaType(parts[0], parts[1]);
     }
-    return http.MediaType('application', 'octet-stream');
+    return MediaType('application', 'octet-stream');
   }
 }
