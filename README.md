@@ -31,24 +31,6 @@ This SDK is 100% feature-complete with the Addis AI Platform:
 
 ## Installation
 
-This SDK and its example/test applications ship with a custom logo `logo_icon.jpg` stored in `apps/addis_assistant/assets/`.
-It's also used in this README above. To apply it as the launcher icon for the sample apps run:
-
-```bash
-cd apps/addis_assistant
-flutter pub get
-flutter pub run flutter_launcher_icons:main
-
-# repeat for example app
-cd ../../example
-flutter pub get
-flutter pub run flutter_launcher_icons:main
-```
-
-These commands use the `flutter_launcher_icons` package, which is added in each app's `dev_dependencies` and configured in their `pubspec.yaml`.
-
-## Installation
-
 Add this to your package's `pubspec.yaml` file:
 
 ```yaml

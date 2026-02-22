@@ -98,6 +98,8 @@ class AddisAI {
 
     // Prepare JSON metadata
     final requestJson = request.toJson();
+    // `requestJsonStr` is only needed after the body is constructed;
+    // keep around for debugging prints later.
     final requestJsonStr = jsonEncode(requestJson);
 
     // Build multipart body manually so we can control part order/headers exactly.
@@ -376,11 +378,4 @@ class AddisAI {
 
   /// Parses a MIME type string like `"image/jpeg"` into an [http.MediaType]
   /// compatible object used by [http.MultipartFile].
-  static MediaType _parseMediaType(String mimeType) {
-    final parts = mimeType.split('/');
-    if (parts.length == 2) {
-      return MediaType(parts[0], parts[1]);
-    }
-    return MediaType('application', 'octet-stream');
-  }
 }

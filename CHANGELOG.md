@@ -1,5 +1,9 @@
 ## 0.0.1
 
+## [0.1.1] - 2026-02-22
+### Fixed
+- corrected license text and tightened dependencies
+
 ## [0.1.0] - 2026-02-22
 ### Added
 - Initial release of Addis AI Flutter SDK
