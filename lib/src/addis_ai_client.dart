@@ -4,7 +4,6 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
-import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart';
 
 import 'constants.dart';
@@ -98,9 +97,7 @@ class AddisAI {
 
     // Prepare JSON metadata
     final requestJson = request.toJson();
-    // `requestJsonStr` is only needed after the body is constructed;
-    // keep around for debugging prints later.
-    final requestJsonStr = jsonEncode(requestJson);
+    final requestJsonStr = jsonEncode(requestJson); // used below for logging
 
     // Build multipart body manually so we can control part order/headers exactly.
     final boundary =
@@ -191,7 +188,7 @@ class AddisAI {
 
     // 1. Prepare Request JSON
     final requestJson = streamRequest.toJson();
-    final requestJsonStr = jsonEncode(requestJson);
+    // no need to stringify for streaming path unless debugging
 
     // NOTE: Add any file parts here if needed (this streaming path currently
     // does not attach files in examples). Then append `request_data` as the
