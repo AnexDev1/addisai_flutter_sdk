@@ -11,10 +11,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: any
-  mime: any
-  http_parser: any
-  web_socket_channel: any
+  http: ^1.6.0
+  mime: ^1.0.6
+  http_parser: ^4.1.2
+  web_socket_channel: ^3.0.3
 
 dev_dependencies:
   flutter_test:

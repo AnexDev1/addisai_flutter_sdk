@@ -180,6 +180,38 @@ realtimeSession.messages.listen((message) {
        print('Received Model Audio Fragment: ${rawAudioBytes.length} bytes');
      }
      if (message.isTurnComplete) print('Bot finished speaking.');
+```
+
+---
+
+## Publishing to pub.dev
+The SDK is ready to be published. Before you run the real publish command, make sure:
+
+1. **Version bump** – update the `version` field in `pubspec.yaml` (e.g. `0.1.1`).
+2. **Bundle size** – run `flutter pub publish --dry-run` from the project root to verify there are no errors.
+3. **Documentation & changelog** – update `CHANGELOG.md` with your release notes.
+4. **Assets** – only Dart code and necessary files are included; the example folder is ignored by default.
+5. **Terms** – you have permission to publish any bundled assets (logo, etc.) under MIT license.
+
+Once ready, publish with:
+
+```bash
+# from workspace root
+cd addisai_flutter_sdk
+flutter pub publish
+# or for pure Dart packages: dart pub publish
+```
+
+Follow the interactive prompts. The dry run step will flag common mistakes (missing homepage, invalid version, etc.).
+
+After publishing, update the version badge at the top of this README if desired:
+
+```
+![Pub Version](https://img.shields.io/pub/v/addis_ai_sdk)
+```
+
+Happy publishing!  
+(You can also automate via GitHub Actions or another CI workflow.)
   } else if (message is RealtimeStatusMessage) {
      print('Server Status: ${message.message}');
   }
