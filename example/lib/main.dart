@@ -5,7 +5,7 @@ import 'tts_tab.dart';
 import 'realtime_tab.dart';
 
 // Please use your real API key below or set it here for testing
-const String apiKey = 'sk_d050b60f-71b6-4b81-874c-ceb215972176_abe47041b8787fdf322c350082b3cad20367a9b526e64657bd55ab3f936a8e63';
+const String apiKey = 'API KEY';
 
 void main() {
   runApp(const AddisAIDemoApp());
@@ -36,7 +36,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
-  
+
   late final AddisAI _client;
 
   @override

@@ -23,10 +23,10 @@ class AudioService {
 
   Future<void> startRecording() async {
     if (!_isRecorderInitialized) await init();
-    
+
     final directory = await getTemporaryDirectory();
     final path = '${directory.path}/temp_record.wav';
-    
+
     await _recorder.startRecorder(
       toFile: path,
       codec: Codec.pcm16WAV,
@@ -38,7 +38,8 @@ class AudioService {
   Future<String?> stopRecording() async {
     final path = await _recorder.stopRecorder();
     if (path != null) {
-      await Future.delayed(const Duration(milliseconds: 200)); // Ensure file is flushed
+      await Future.delayed(
+          const Duration(milliseconds: 200)); // Ensure file is flushed
     }
     return path;
   }
@@ -47,7 +48,7 @@ class AudioService {
     final directory = await getTemporaryDirectory();
     final file = File('${directory.path}/temp_audio.mp3');
     await file.writeAsBytes(bytes);
-    
+
     await _player.setFilePath(file.path);
     await _player.play();
   }
