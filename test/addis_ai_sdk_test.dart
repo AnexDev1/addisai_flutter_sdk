@@ -13,11 +13,13 @@ void main() {
   /// Creates a [MockClient] that returns [body] with [statusCode].
   /// Uses UTF-8 encoding to support Amharic/Oromo text.
   http.Client mockClient(String body, {int statusCode = 200}) {
-    return MockClient((_) async => http.Response(
-      body,
-      statusCode,
-      headers: {'content-type': 'application/json; charset=utf-8'},
-    ));
+    return MockClient(
+      (_) async => http.Response(
+        body,
+        statusCode,
+        headers: {'content-type': 'application/json; charset=utf-8'},
+      ),
+    );
   }
 
   /// Standard successful chat response JSON.
@@ -65,8 +67,11 @@ void main() {
         apiKey: 'my-api-key',
         client: MockClient((request) async {
           capturedRequest = request;
-          return http.Response(chatResponseJson, 200,
-              headers: {'content-type': 'application/json; charset=utf-8'});
+          return http.Response(
+            chatResponseJson,
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
         }),
       );
 
@@ -74,8 +79,10 @@ void main() {
         ChatRequest(
           prompt: 'Test',
           targetLanguage: Language.om,
-          generationConfig:
-              const GenerationConfig(temperature: 0.5, maxOutputTokens: 500),
+          generationConfig: const GenerationConfig(
+            temperature: 0.5,
+            maxOutputTokens: 500,
+          ),
         ),
       );
 
@@ -95,8 +102,11 @@ void main() {
         apiKey: 'key',
         client: MockClient((request) async {
           capturedRequest = request;
-          return http.Response(chatResponseJson, 200,
-              headers: {'content-type': 'application/json; charset=utf-8'});
+          return http.Response(
+            chatResponseJson,
+            200,
+            headers: {'content-type': 'application/json; charset=utf-8'},
+          );
         }),
       );
 
@@ -234,10 +244,7 @@ void main() {
         client: mockClient(
           jsonEncode({
             'status': 'error',
-            'error': {
-              'code': 'RATE_LIMIT',
-              'message': 'Too many requests',
-            },
+            'error': {'code': 'RATE_LIMIT', 'message': 'Too many requests'},
           }),
           statusCode: 429,
         ),
@@ -257,19 +264,15 @@ void main() {
         client: mockClient(
           jsonEncode({
             'status': 'error',
-            'error': {
-              'code': 'INTERNAL_ERROR',
-              'message': 'Server error',
-            },
+            'error': {'code': 'INTERNAL_ERROR', 'message': 'Server error'},
           }),
           statusCode: 500,
         ),
       );
 
       expect(
-        () => client.textToSpeech(
-          TtsRequest(text: 'Hi', language: Language.am),
-        ),
+        () =>
+            client.textToSpeech(TtsRequest(text: 'Hi', language: Language.am)),
         throwsA(isA<ServerException>()),
       );
     });
@@ -301,10 +304,7 @@ void main() {
 
   group('model serialization', () {
     test('ChatRequest.toJson omits null fields', () {
-      final request = ChatRequest(
-        prompt: 'Hello',
-        targetLanguage: Language.am,
-      );
+      final request = ChatRequest(prompt: 'Hello', targetLanguage: Language.am);
       final json = request.toJson();
 
       expect(json['prompt'], 'Hello');
@@ -318,9 +318,7 @@ void main() {
       final request = ChatRequest(
         prompt: 'Hello',
         targetLanguage: Language.om,
-        conversationHistory: [
-          ChatMessage(role: 'user', content: 'Hi'),
-        ],
+        conversationHistory: [ChatMessage(role: 'user', content: 'Hi')],
         generationConfig: const GenerationConfig(
           temperature: 0.9,
           stream: true,
@@ -419,8 +417,7 @@ void main() {
     test('yields decoded audio byte chunks', () async {
       final audioData1 = base64Encode(utf8.encode('chunk1'));
       final audioData2 = base64Encode(utf8.encode('chunk2'));
-      final body =
-          '${jsonEncode({'audio_chunk': audioData1, 'index': 0})}\n'
+      final body = '${jsonEncode({'audio_chunk': audioData1, 'index': 0})}\n'
           '${jsonEncode({'audio_chunk': audioData2, 'index': 1})}\n';
 
       final client = AddisAI(
@@ -431,9 +428,7 @@ void main() {
       );
 
       final chunks = await client
-          .streamTextToSpeech(
-            TtsRequest(text: 'Test', language: Language.am),
-          )
+          .streamTextToSpeech(TtsRequest(text: 'Test', language: Language.am))
           .toList();
 
       expect(chunks.length, 2);
@@ -458,8 +453,7 @@ void main() {
       client.close();
       // The external client should still work.
       expect(
-        () async =>
-            httpClient.get(Uri.parse('https://example.com')),
+        () async => httpClient.get(Uri.parse('https://example.com')),
         returnsNormally,
       );
     });

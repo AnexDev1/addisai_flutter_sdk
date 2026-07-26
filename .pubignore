@@ -1,0 +1,12 @@
+apps/
+build/
+devices.txt
+example/android/
+example/ios/
+example/linux/
+example/macos/
+example/web/
+example/windows/
+example/assets/
+example/pubspec.lock
+**/devtools_options.yaml

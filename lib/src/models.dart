@@ -22,10 +22,7 @@ class GenerationConfig {
   });
 
   Map<String, dynamic> toJson() {
-    final map = <String, dynamic>{
-      'temperature': temperature,
-      'stream': stream,
-    };
+    final map = <String, dynamic>{'temperature': temperature, 'stream': stream};
     if (maxOutputTokens != null) {
       map['maxOutputTokens'] = maxOutputTokens;
     }
@@ -85,9 +82,7 @@ class ChatRequest {
     // null/blank, and omit the redundant alias fields in that case.
     final hasPrompt = prompt != null && prompt!.trim().isNotEmpty;
     final p = hasPrompt ? prompt! : '';
-    final map = <String, dynamic>{
-      'target_language': targetLanguage.value,
-    };
+    final map = <String, dynamic>{'target_language': targetLanguage.value};
     if (hasPrompt) {
       map.addAll({
         'prompt': p,
@@ -205,7 +200,8 @@ class ChatResponse {
       finishReason: json['finish_reason'] as String?,
       usageMetadata: json['usage_metadata'] != null
           ? UsageMetadata.fromJson(
-              json['usage_metadata'] as Map<String, dynamic>)
+              json['usage_metadata'] as Map<String, dynamic>,
+            )
           : null,
       modelVersion: json['modelVersion'] as String?,
       uploadedAttachments: (json['uploaded_attachments'] as List<dynamic>?)
@@ -269,6 +265,9 @@ abstract class RealtimeMessage {
 
   /// Parse the JSON payload from the WebSocket and return a typed message.
   factory RealtimeMessage.fromJson(Map<String, dynamic> json) {
+    if (json['setupComplete'] == true) {
+      return const RealtimeReadyMessage();
+    }
     if (json.containsKey('type') && json['type'] == 'status') {
       return RealtimeStatusMessage(message: json['message'] as String);
     }
@@ -288,6 +287,11 @@ abstract class RealtimeMessage {
     }
     return const RealtimeUnknownMessage();
   }
+}
+
+/// The realtime server is ready to accept PCM audio frames.
+class RealtimeReadyMessage extends RealtimeMessage {
+  const RealtimeReadyMessage();
 }
 
 /// A status or informational message from the server (e.g., "Ready to start").

@@ -23,3 +23,6 @@ export 'src/models.dart';
 export 'src/exceptions.dart';
 export 'src/addis_ai_client.dart';
 export 'src/realtime_client.dart';
+export 'src/official_models.dart';
+export 'src/resources.dart';
+export 'src/transport.dart' show AddisRequestOptions;
