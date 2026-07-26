@@ -1,3 +1,12 @@
+## [0.2.2] - 2026-07-27
+
+### Documentation
+
+- Added Addis AI artwork and a polished centered header to the GitHub and
+  pub.dev package README.
+- Bundled the optimized source artwork in the repository so the package
+  branding remains maintainable.
+
 ## [0.2.1] - 2026-07-27
 
 ### Documentation

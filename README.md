@@ -1,4 +1,16 @@
-# Addis AI SDK for Flutter and Dart
+<p align="center">
+  <img
+    src="https://raw.githubusercontent.com/AnexDev1/addisai_flutter_sdk/v1prod/assets/addis-ai-og.png"
+    alt="Addis AI"
+    width="240"
+  />
+</p>
+
+<h1 align="center">Addis AI SDK for Flutter and Dart</h1>
+
+<p align="center">
+  Build multilingual AI experiences for every Flutter platform.
+</p>
 
 [![pub package](https://img.shields.io/pub/v/addis_ai_sdk.svg)](https://pub.dev/packages/addis_ai_sdk)
 [![pub points](https://img.shields.io/pub/points/addis_ai_sdk)](https://pub.dev/packages/addis_ai_sdk/score)
@@ -45,7 +57,7 @@ Or add the current release to `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  addis_ai_sdk: ^0.2.1
+  addis_ai_sdk: ^0.2.2
 ```
 
 Then import the public library:
