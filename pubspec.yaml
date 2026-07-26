@@ -1,7 +1,7 @@
 name: addis_ai_sdk
 license: MIT
 description: Production-ready Flutter and Dart SDK for Addis AI chat, voice, speech-to-text, and translation APIs.
-version: 0.2.0
+version: 0.2.2
 homepage: https://platform.addisassistant.com
 repository: https://github.com/AnexDev1/addisai_flutter_sdk
 issue_tracker: https://github.com/AnexDev1/addisai_flutter_sdk/issues

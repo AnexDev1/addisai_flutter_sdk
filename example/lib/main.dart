@@ -4,8 +4,7 @@ import 'chat_tab.dart';
 import 'tts_tab.dart';
 import 'realtime_tab.dart';
 
-// Please use your real API key below or set it here for testing
-const String apiKey = 'API KEY';
+const String apiKey = String.fromEnvironment('ADDIS_API_KEY');
 
 void main() {
   runApp(const AddisAIDemoApp());
@@ -37,29 +36,31 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
-  late final AddisAI _client;
+  AddisAI? _client;
 
   @override
   void initState() {
     super.initState();
-    _client = AddisAI(apiKey: apiKey);
+    if (apiKey.isNotEmpty) {
+      _client = AddisAI(apiKey: apiKey);
+    }
   }
 
   @override
   void dispose() {
-    _client.close();
+    _client?.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    if (apiKey == 'YOUR_API_KEY') {
+    if (_client == null) {
       return Scaffold(
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),
             child: Text(
-              'Please add your real API key in main.dart to run the example.',
+              'Run with --dart-define=ADDIS_API_KEY=sk_your_key',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.titleLarge,
             ),
@@ -69,9 +70,9 @@ class _MainScreenState extends State<MainScreen> {
     }
 
     final screens = [
-      ChatTab(client: _client),
-      TtsTab(client: _client),
-      RealtimeTab(client: _client),
+      ChatTab(client: _client!),
+      TtsTab(client: _client!),
+      RealtimeTab(client: _client!),
     ];
 
     return Scaffold(

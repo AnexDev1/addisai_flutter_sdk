@@ -37,8 +37,6 @@ dependencies:
   addis_ai_sdk:
     path: ../
   just_audio: ^0.9.36
-  image_picker: ^1.1.2
-  path_provider: ^2.1.3
 
 dev_dependencies:
   flutter_test:
