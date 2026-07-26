@@ -1,3 +1,19 @@
+## [0.2.1] - 2026-07-27
+
+### Documentation
+
+- Redesigned the pub.dev README with a feature matrix, secure installation
+  guidance, current API examples, platform support, migration notes, and links.
+- Reworked the Flutter example to load credentials through `--dart-define`
+  instead of suggesting a source-code API key.
+- Updated the voice example to use the current voice catalog and durable clip
+  generation API.
+
+### Fixed
+
+- Restored the canonical OSI-approved MIT license text so automated package
+  scoring and license detection work correctly.
+
 ## [0.2.0] - 2026-07-27
 
 ### Added

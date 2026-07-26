@@ -1,5 +1,6 @@
 apps/
 build/
+doc/
 devices.txt
 example/android/
 example/ios/

@@ -1,9 +1,6 @@
-import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/material.dart';
 import 'package:addis_ai_sdk/addis_ai_sdk.dart';
+import 'package:flutter/material.dart';
 import 'package:just_audio/just_audio.dart';
-import 'package:path_provider/path_provider.dart';
 
 class TtsTab extends StatefulWidget {
   final AddisAI client;
@@ -37,19 +34,21 @@ class _TtsTabState extends State<TtsTab> {
     });
 
     try {
-      final ttsResponse = await widget.client.textToSpeech(
-        TtsRequest(text: text, language: Language.am),
+      final voices = await widget.client.voices.list(language: Language.am);
+      if (voices.isEmpty) {
+        throw const AddisAIException(message: 'No Amharic voices available.');
+      }
+      final clip = await widget.client.voice.generate(
+        VoiceGenerateParams(
+          voiceId: voices.first.id,
+          text: text,
+          language: Language.am,
+        ),
       );
-
-      final decodedBytes = base64Decode(ttsResponse.audioBase64);
-
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/tts_audio.wav');
-      await tempFile.writeAsBytes(decodedBytes);
 
       setState(() => _statusMessage = 'Playing Audio...');
 
-      await _audioPlayer.setFilePath(tempFile.path);
+      await _audioPlayer.setUrl(clip.audioUrl);
       await _audioPlayer.play();
 
       setState(() => _statusMessage = 'Finished playing.');
