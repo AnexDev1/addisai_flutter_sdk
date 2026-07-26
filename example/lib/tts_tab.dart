@@ -16,7 +16,7 @@ class TtsTab extends StatefulWidget {
 class _TtsTabState extends State<TtsTab> {
   final TextEditingController _controller = TextEditingController();
   final AudioPlayer _audioPlayer = AudioPlayer();
-  
+
   bool _isLoading = false;
   String _statusMessage = 'Ready';
 
@@ -38,20 +38,17 @@ class _TtsTabState extends State<TtsTab> {
 
     try {
       final ttsResponse = await widget.client.textToSpeech(
-        TtsRequest(
-          text: text,
-          language: Language.am,
-        )
+        TtsRequest(text: text, language: Language.am),
       );
 
       final decodedBytes = base64Decode(ttsResponse.audioBase64);
-      
+
       final tempDir = await getTemporaryDirectory();
       final tempFile = File('${tempDir.path}/tts_audio.wav');
       await tempFile.writeAsBytes(decodedBytes);
 
       setState(() => _statusMessage = 'Playing Audio...');
-      
+
       await _audioPlayer.setFilePath(tempFile.path);
       await _audioPlayer.play();
 
@@ -90,8 +87,12 @@ class _TtsTabState extends State<TtsTab> {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: _isLoading ? null : _playTts,
-            icon: _isLoading 
-                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+            icon: _isLoading
+                ? const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : const Icon(Icons.volume_up),
             label: const Text('Generate & Play'),
             style: ElevatedButton.styleFrom(

@@ -43,8 +43,9 @@ class _RealtimeTabState extends State<RealtimeTab> {
     try {
       setState(() => _isConnected = true);
       _addLog('Connecting...');
-      
+
       _realtimeSession = await widget.client.createRealtimeSession();
+      await _realtimeSession!.ready;
       _addLog('Connected successfully.');
 
       _realtimeSession!.messages.listen(
@@ -82,7 +83,7 @@ class _RealtimeTabState extends State<RealtimeTab> {
     if (_realtimeSession == null) return;
     _addLog('Simulating 16kHz PCM audio upload...');
     // Real implementation would use record package: e.g. record.startStream(pcm_16khz)
-    final dummyWavBytes = List<int>.filled(1024, 0); 
+    final dummyWavBytes = List<int>.filled(1024, 0);
     _realtimeSession!.sendAudio(dummyWavBytes);
   }
 
@@ -118,7 +119,10 @@ class _RealtimeTabState extends State<RealtimeTab> {
           ),
           const SizedBox(height: 24),
           const Divider(),
-          const Text('Session Logs', style: TextStyle(fontWeight: FontWeight.bold)),
+          const Text(
+            'Session Logs',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 8),
           Expanded(
             child: Container(
@@ -135,7 +139,10 @@ class _RealtimeTabState extends State<RealtimeTab> {
                     padding: const EdgeInsets.symmetric(vertical: 4),
                     child: Text(
                       _logs[index],
-                      style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                      style: const TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                      ),
                     ),
                   );
                 },

@@ -1,13 +1,14 @@
 name: addis_ai_sdk
 license: MIT
-description: "Flutter SDK for Addis AI API, supporting Ethiopian languages like Amharic and Afan Oromo."
-version: 0.1.1
+description: Production-ready Flutter and Dart SDK for Addis AI chat, voice, speech-to-text, and translation APIs.
+version: 0.2.0
 homepage: https://platform.addisassistant.com
-repository: https://github.com/addisai/addis_ai_flutter_sdk
+repository: https://github.com/AnexDev1/addisai_flutter_sdk
+issue_tracker: https://github.com/AnexDev1/addisai_flutter_sdk/issues
 
 environment:
   sdk: ^3.2.2
-  flutter: ">=1.17.0"
+  flutter: ">=3.16.0"
 
 dependencies:
   flutter:

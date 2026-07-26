@@ -1,5 +1,6 @@
-/// A Calculator.
-class Calculator {
-  /// Returns [value] plus 1.
-  int addOne(int value) => value + 1;
-}
+/// Backward-compatible entrypoint.
+///
+/// Prefer importing `package:addis_ai_sdk/addis_ai_sdk.dart`.
+library;
+
+export 'addis_ai_sdk.dart';

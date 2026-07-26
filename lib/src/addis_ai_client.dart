@@ -4,12 +4,15 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart' as http_parser;
 import 'package:mime/mime.dart';
 
 import 'constants.dart';
 import 'exceptions.dart';
 import 'models.dart';
 import 'realtime_client.dart';
+import 'resources.dart';
+import 'transport.dart';
 
 /// Client for the Addis AI API.
 ///
@@ -31,13 +34,57 @@ class AddisAI {
   final http.Client _client;
   final bool _ownsClient;
 
+  /// OpenAI-style chat resource (`client.chat.completions.create(...)`).
+  late final ChatResource chat;
+
+  /// Current durable voice generation and clip management API.
+  late final VoiceResource voice;
+
+  /// Addis AI voice catalog.
+  late final VoicesResource voices;
+
+  /// Speech-to-text API.
+  late final SpeechResource speech;
+
+  /// Translation API.
+  late final TranslateResource translate;
+
+  /// ElevenLabs-style alias for the current voice API.
+  late final TextToSpeechResource textToSpeechV2;
+
+  late final AddisTransport _transport;
+
   /// Creates an [AddisAI] client.
   ///
   /// If no [client] is provided, an internal [http.Client] is created and
   /// will be closed when [close] is called.
-  AddisAI({required this.apiKey, http.Client? client})
-      : _client = client ?? http.Client(),
-        _ownsClient = client == null;
+  AddisAI({
+    required String apiKey,
+    http.Client? client,
+    String apiBaseUrl = defaultBaseUrl,
+    Duration timeout = const Duration(seconds: 60),
+    int maxRetries = 3,
+    Map<String, String> defaultHeaders = const {},
+    Map<String, String> defaultQuery = const {},
+  })  : apiKey = _validateApiKey(apiKey),
+        _client = client ?? http.Client(),
+        _ownsClient = client == null {
+    _transport = AddisTransport(
+      apiKey: apiKey,
+      baseUrl: _validateBaseUrl(apiBaseUrl),
+      timeout: timeout,
+      maxRetries: maxRetries,
+      defaultHeaders: defaultHeaders,
+      defaultQuery: defaultQuery,
+      client: _client,
+    );
+    chat = ChatResource(_transport);
+    voice = VoiceResource(_transport);
+    voices = VoicesResource(_transport);
+    speech = SpeechResource(_transport);
+    translate = TranslateResource(_transport);
+    textToSpeechV2 = TextToSpeechResource(voice);
+  }
 
   // -------------------------------------------------------------------------
   // Realtime API
@@ -57,9 +104,7 @@ class AddisAI {
         'Content-Type': 'application/json',
       };
 
-  Map<String, String> get _authHeaders => {
-        'X-API-Key': apiKey,
-      };
+  Map<String, String> get _authHeaders => {'X-API-Key': apiKey};
 
   // -------------------------------------------------------------------------
   // Chat Generation
@@ -102,7 +147,7 @@ class AddisAI {
     // Build multipart body manually so we can control part order/headers exactly.
     final boundary =
         '----dart_form_boundary_${DateTime.now().millisecondsSinceEpoch}';
-    final crlf = '\r\n';
+    const crlf = '\r\n';
     final bodyBytes = <int>[];
 
     void addString(String s) {
@@ -127,7 +172,8 @@ class AddisAI {
 
       addString('--$boundary$crlf');
       addString(
-          'Content-Disposition: form-data; name="${fieldName}"; filename="${fileName}"$crlf');
+        'Content-Disposition: form-data; name="$fieldName"; filename="$fileName"$crlf',
+      );
       addString('Content-Type: $mimeType$crlf$crlf');
       bodyBytes.addAll(bytes);
       addString(crlf);
@@ -142,15 +188,6 @@ class AddisAI {
 
     // Final boundary
     addString('--$boundary--$crlf');
-
-    // DEBUG LOG
-    print('DEBUG SDK REQ: Endpoint: $uri');
-    print(
-        'DEBUG SDK REQ: Files: ${files.keys.map((k) => '$k (${files[k]?.length ?? 0} bytes)').join(', ')}');
-    print('DEBUG SDK REQ: request_data: $requestJsonStr');
-    final preview =
-        utf8.decode(bodyBytes.take(1024).toList(), allowMalformed: true);
-    print('DEBUG SDK REQ BODY PREVIEW:\n$preview\n---');
 
     final httpRequest = http.Request('POST', uri)
       ..headers.addAll(_authHeaders)
@@ -186,13 +223,13 @@ class AddisAI {
     final multipart = http.MultipartRequest('POST', uri)
       ..headers.addAll(_authHeaders);
 
-    // 1. Prepare Request JSON
-    final requestJson = streamRequest.toJson();
-    // no need to stringify for streaming path unless debugging
-
-    // NOTE: Add any file parts here if needed (this streaming path currently
-    // does not attach files in examples). Then append `request_data` as the
-    // last multipart part with application/json content type.
+    multipart.files.add(
+      http.MultipartFile.fromString(
+        'request_data',
+        jsonEncode(streamRequest.toJson()),
+        contentType: http_parser.MediaType('application', 'json'),
+      ),
+    );
 
     final streamedResponse =
         await _client.send(multipart).timeout(const Duration(seconds: 30));
@@ -203,10 +240,9 @@ class AddisAI {
     }
 
     // Parse the SSE stream. Lines are prefixed with "data: ".
-    await for (final line
-        in streamedResponse.stream.transform(utf8.decoder).transform(
-              const LineSplitter(),
-            )) {
+    await for (final line in streamedResponse.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())) {
       final trimmed = line.trim();
       if (trimmed.isEmpty) continue;
 
@@ -234,8 +270,6 @@ class AddisAI {
           json = json['data'] as Map<String, dynamic>;
         }
 
-        print('DEBUG SDK JSON: $json');
-        print('DEBUG SDK CHUNK JSON: $json');
         yield ChatResponse.fromJson(json);
       } on FormatException {
         // Skip lines that are not valid JSON (e.g. SSE comments).
@@ -292,10 +326,9 @@ class AddisAI {
       _throwFromBody(streamedResponse.statusCode, body);
     }
 
-    await for (final line
-        in streamedResponse.stream.transform(utf8.decoder).transform(
-              const LineSplitter(),
-            )) {
+    await for (final line in streamedResponse.stream
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())) {
       final trimmed = line.trim();
       if (trimmed.isEmpty) continue;
 
@@ -349,15 +382,7 @@ class AddisAI {
     if (json.containsKey('data') && json['data'] is Map<String, dynamic>) {
       json = json['data'] as Map<String, dynamic>;
     }
-    final chatRes = ChatResponse.fromJson(json);
-    if (chatRes.uploadedAttachments.isNotEmpty) {
-      print(
-          'DEBUG SDK RES: Attachments: ${chatRes.uploadedAttachments.length}');
-    }
-    if (chatRes.transcriptionClean != null) {
-      print('DEBUG SDK RES: Transcription: "${chatRes.transcriptionClean}"');
-    }
-    return chatRes;
+    return ChatResponse.fromJson(json);
   }
 
   Never _throwFromBody(int statusCode, String body) {
@@ -375,4 +400,31 @@ class AddisAI {
 
   /// Parses a MIME type string like `"image/jpeg"` into an [http.MediaType]
   /// compatible object used by [http.MultipartFile].
+}
+
+String _validateApiKey(String value) {
+  if (value.trim().isEmpty) {
+    throw ArgumentError.value(value, 'apiKey', 'must not be empty');
+  }
+  return value;
+}
+
+String _validateBaseUrl(String value) {
+  final normalized = value.trim().replaceFirst(RegExp(r'/+$'), '');
+  final uri = Uri.tryParse(normalized);
+  if (uri == null || !uri.hasScheme || uri.host.isEmpty) {
+    throw ArgumentError.value(value, 'apiBaseUrl', 'must be a valid URL');
+  }
+  final local = uri.host == 'localhost' || uri.host == '127.0.0.1';
+  if (uri.scheme != 'https' && !local) {
+    throw ArgumentError.value(value, 'apiBaseUrl', 'must use HTTPS');
+  }
+  if (uri.host.endsWith('.supabase.co') || uri.host.endsWith('.supabase.in')) {
+    throw ArgumentError.value(
+      value,
+      'apiBaseUrl',
+      'raw Supabase hosts are not supported; use $defaultBaseUrl',
+    );
+  }
+  return normalized;
 }
